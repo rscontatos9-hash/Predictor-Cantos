@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Predictor PWA - Cantos</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-green: #39ff14;
+            --neon-green-dim: rgba(57, 255, 20, 0.15);
+            --text-main: #ffffff;
+            --text-muted: #8a8a9a;
+            --input-bg: rgba(0, 0, 0, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-blob {
+            position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.4;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 300px; height: 300px; background: #1a2a3a; }
+        .blob-2 { bottom: -10%; right: -10%; width: 400px; height: 400px; background: #0d2b1a; }
+
+        .app-container {
+            max-width: 480px; margin: 0 auto; padding: 20px 16px 40px;
+        }
+
+        header {
+            text-align: center; padding: 20px 0 30px;
+            border-bottom: 1px solid var(--glass-border); margin-bottom: 30px;
+        }
+        header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; }
+        header h1 span { color: var(--neon-green); }
+        header p { color: var(--text-muted); font-size: 0.8rem; margin-top: 5px; text-transform: uppercase; letter-spacing: 2px; }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .teams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .team-title {
+            font-size: 0.9rem; font-weight: 600; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--glass-border);
+            text-align: center;
+        }
+        .team-title.home { color: #4da6ff; }
+        .team-title.away { color: #ff6b6b; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;
+        }
+        .input-group label span.val { color: var(--text-main); font-weight: 600; }
+
+        input[type="number"], input[type="range"] { width: 100%; }
+        
+        input[type="number"] {
+            background: var(--input-bg); border: 1px solid var(--glass-border);
+            border-radius: 10px; padding: 10px; color: white; font-size: 1rem;
+            font-family: 'Inter', sans-serif; outline: none; transition: 0.3s;
+        }
+        input[type="number"]:focus { border-color: var(--neon-green); box-shadow: 0 0 10px var(--neon-green-dim); }
+
+        input[type="range"] {
+            -webkit-appearance: none; height: 6px; border-radius: 5px;
+            background: var(--input-bg); outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+            background: var(--neon-green); cursor: pointer; box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .btn-simulate {
+            width: 100%; padding: 18px; border: none; border-radius: 16px;
+            background: linear-gradient(135deg, #1a3a1a 0%, #0d2b0d 100%);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            color: var(--neon-green); font-size: 1.1rem; font-weight: 800;
+            font-family: 'Inter', sans-serif; cursor: pointer; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px;
+        }
+        .btn-simulate:active { transform: scale(0.98); background: rgba(57, 255, 20, 0.15); }
+
+        #results-section { display: none; animation: fadeIn 0.5s ease-out; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .odds-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .odd-box {
+            background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px 5px; text-align: center;
+            border: 1px solid var(--glass-border); transition: 0.3s;
+        }
+        .odd-box.winner { border-color: var(--neon-green); box-shadow: 0 0 15px var(--neon-green-dim); }
+        .odd-box .label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px; }
+        .odd-box .percent { font-size: 1.4rem; font-weight: 800; }
+        .odd-box .fair-odd { font-size: 0.8rem; color: var(--neon-green); margin-top: 4px; font-weight: 600;}
+        .odd-box.winner .percent { color: var(--neon-green); }
+
+        .goals-row, .score-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .stat-mini {
+            background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px;
+            border: 1px solid var(--glass-border);
+        }
+        .stat-mini .label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;}
+        .stat-mini .value { font-size: 1.3rem; font-weight: 600; }
+        .stat-mini .value.yes { color: var(--neon-green); }
+
+        .exact-score-card {
+            text-align: center; margin-top: 15px;
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.05) 0%, rgba(0,0,0,0) 100%);
+        }
+        .exact-score-card .label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;}
+        .exact-score-display { 
+            font-size: 2.8rem; font-weight: 800; letter-spacing: 5px; color: white; 
+            text-shadow: 0 0 20px rgba(255,255,255,0.2); 
+            font-variant-numeric: tabular-nums; /* Evita que os números saltatem ao mudar */
+        }
+        .exact-score-prob { margin-top: 5px; font-size: 0.9rem; color: var(--neon-green); }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="app-container">
+        <header>
+            <h1>Predictor <span>Cantos</span></h1>
+            <p>Poisson Engine • Corner Kicks Model</p>
+        </header>
+
+        <div class="glass-card">
+            <div class="teams-grid">
+                <!-- MANDANTE -->
+                <div class="team-block">
+                    <div class="team-title home">Mandante</div>
+                    <div class="input-group">
+                        <label>Cantos a Favor (Média) <span class="val" id="val-hg">5.50</span></label>
+                        <input type="number" id="home-goals" value="5.50" step="0.1" min="0" oninput="document.getElementById('val-hg').innerText=this.value">
+                    </div>
+                    <div class="input-group">
+                        <label>Cantos Sofridos (Média) <span class="val" id="val-hc">4.20</span></label>
+                        <input type="number" id="home-conceded" value="4.20" step="0.1" min="0" oninput="document.getElementById('val-hc').innerText=this.value">
+                    </div>
+                    <div class="input-group">
+                        <label>xC (Opcional) <span class="val" id="val-hxg">-</span></label>
+                        <input type="number" id="home-xg" step="0.1" min="0" placeholder="Ex: 6.2" oninput="document.getElementById('val-hxg').innerText=this.value || '-'">
+                    </div>
+                    <div class="input-group">
+                        <label>Motivação/Estratégia <span class="val" id="val-hm">5</span></label>
+                        <input type="range" id="home-motivation" min="1" max="10" value="5" oninput="document.getElementById('val-hm').innerText=this.value">
+                    </div>
+                </div>
+
+                <!-- VISITANTE -->
+                <div class="team-block">
+                    <div class="team-title away">Visitante</div>
+                    <div class="input-group">
+                        <label>Cantos a Favor (Média) <span class="val" id="val-ag">4.80</span></label>
+                        <input type="number" id="away-goals" value="4.80" step="0.1" min="0" oninput="document.getElementById('val-ag').innerText=this.value">
+                    </div>
+                    <div class="input-group">
+                        <label>Cantos Sofridos (Média) <span class="val" id="val-ac">5.10</span></label>
+                        <input type="number" id="away-conceded" value="5.10" step="0.1" min="0" oninput="document.getElementById('val-ac').innerText=this.value">
+                    </div>
+                    <div class="input-group">
+                        <label>xC (Opcional) <span class="val" id="val-axg">-</span></label>
+                        <input type="number" id="away-xg" step="0.1" min="0" placeholder="Ex: 4.5" oninput="document.getElementById('val-axg').innerText=this.value || '-'">
+                    </div>
+                    <div class="input-group">
+                        <label>Motivação/Estratégia <span class="val" id="val-am">5</span></label>
+                        <input type="range" id="away-motivation" min="1" max="10" value="5" oninput="document.getElementById('val-am').innerText=this.value">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-simulate" onclick="runPoissonEngine()">⚡ SIMULAR CANTOS</button>
+
+        <div id="results-section">
+            <!-- Card 1: Match Odds (Mercado de Cantos) -->
+            <div class="glass-card">
+                <div class="odds-grid">
+                    <div class="odd-box" id="box-home">
+                        <div class="label">Mais Cantos Casa</div>
+                        <div class="percent" id="res-home-perc">0%</div>
+                        <div class="fair-odd" id="res-home-odd">0.00</div>
+                    </div>
+                    <div class="odd-box" id="box-draw">
+                        <div class="label">Cantos Iguais</div>
+                        <div class="percent" id="res-draw-perc">0%</div>
+                        <div class="fair-odd" id="res-draw-odd">0.00</div>
+                    </div>
+                    <div class="odd-box" id="box-away">
+                        <div class="label">Mais Cantos Fora</div>
+                        <div class="percent" id="res-away-perc">0%</div>
+                        <div class="fair-odd" id="res-away-odd">0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Linhas Totais de Cantos -->
+            <div class="glass-card">
+                <div class="goals-row">
+                    <div class="stat-mini">
+                        <div class="label">Total Over 8.5</div>
+                        <div class="value" id="res-o15">0%</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="label">Total Over 10.5</div>
+                        <div class="value" id="res-o25">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Placar Exato de Cantos -->
+            <div class="glass-card exact-score-card">
+                <div class="label">Cantos Exatos Mais Prováveis</div>
+                <div class="exact-score-display" id="res-score">0 x 0</div>
+                <div class="exact-score-prob" id="res-score-prob">Probabilidade: 0%</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+
+        // --- MOTOR DE POISSON ADAPTADO PARA CANTOS ---
+        
+        const poisson = (lambda, k) => {
+            if (lambda === 0) return k === 0 ? 1 : 0;
+            let p = 1.0, i;
+            for (i = 1; i <= k; i++) p *= lambda / i;
+            return p * Math.exp(-lambda);
+        };
+
+        const runPoissonEngine = () => {
+            const hGoals = parseFloat(document.getElementById('home-goals').value) || 0;
+            const hConc = parseFloat(document.getElementById('home-conceded').value) || 0;
+            const hXg = parseFloat(document.getElementById('home-xg').value) || null;
+            const hMot = parseInt(document.getElementById('home-motivation').value);
+
+            const aGoals = parseFloat(document.getElementById('away-goals').value) || 0;
+            const aConc = parseFloat(document.getElementById('away-conceded').value) || 0;
+            const aXg = parseFloat(document.getElementById('away-xg').value) || null;
+            const aMot = parseInt(document.getElementById('away-motivation').value);
+
+            // Lambda Base para Cantos
+            let lambdaHomeBase = (hGoals + aConc) / 2;
+            let lambdaAwayBase = (aGoals + hConc) / 2;
+
+            // Integração do xC (Expected Corners)
+            let lambdaHome = hXg ? (lambdaHomeBase + hXg) / 2 : lambdaHomeBase;
+            let lambdaAway = aXg ? (lambdaAwayBase + aXg) / 2 : lambdaAwayBase;
+
+            // Fator Motivação/Estratégia (10% de peso)
+            const multHome = 0.8 + ((hMot - 1) * 0.044);
+            const multAway = 0.8 + ((aMot - 1) * 0.044);
+            
+            lambdaHome = lambdaHome * (0.9 + (0.1 * multHome));
+            lambdaAway = lambdaAway * (0.9 + (0.1 * multAway));
+
+            // Matriz de Poisson expandida (0 a 15 cobre 99.99% dos cenários de escanteios)
+            const maxCorners = 15;
+            let pHomeWin = 0, pDraw = 0, pAwayWin = 0, pOver85 = 0, pOver105 = 0;
+            let maxProb = 0, likelyHome = 0, likelyAway = 0;
+
+            for (let i = 0; i <= maxCorners; i++) {
+                for (let j = 0; j <= maxCorners; j++) {
+                    const prob = poisson(lambdaHome, i) * poisson(lambdaAway, j);
+                    
+                    if (i > j) pHomeWin += prob;
+                    else if (i === j) pDraw += prob;
+                    else pAwayWin += prob;
+
+                    // Totais do jogo (i + j)
+                    if (i + j > 8.5) pOver85 += prob;
+                    if (i + j > 10.5) pOver105 += prob;
+
+                    if (prob > maxProb) {
+                        maxProb = prob;
+                        likelyHome = i;
+                        likelyAway = j;
+                    }
+                }
+            }
+
+            // Renderização dos Resultados
+            const results = [
+                { id: 'home', prob: pHomeWin },
+                { id: 'draw', prob: pDraw },
+                { id: 'away', prob: pAwayWin }
+            ];
+
+            const maxMatchOdd = results.reduce((max, curr) => curr.prob > max.prob ? curr : max);
+
+            results.forEach(r => {
+                const perc = (r.prob * 100).toFixed(1);
+                const fairOdd = r.prob > 0 ? (1 / r.prob).toFixed(2) : "0.00";
+                
+                document.getElementById(`res-${r.id}-perc`).innerText = `${perc}%`;
+                document.getElementById(`res-${r.id}-odd`).innerText = `Odd Justa: ${fairOdd}`;
+                
+                const box = document.getElementById(`box-${r.id}`);
+                if (r.id === maxMatchOdd.id) {
+                    box.classList.add('winner');
+                } else {
+                    box.classList.remove('winner');
+                }
+            });
+
+            document.getElementById('res-o15').innerText = `${(pOver85 * 100).toFixed(1)}%`;
+            document.getElementById('res-o15').className = pOver85 > 0.5 ? 'value yes' : 'value';
+            
+            document.getElementById('res-o25').innerText = `${(pOver105 * 100).toFixed(1)}%`;
+            document.getElementById('res-o25').className = pOver105 > 0.5 ? 'value yes' : 'value';
+
+            document.getElementById('res-score').innerText = `${likelyHome} x ${likelyAway}`;
+            document.getElementById('res-score-prob').innerText = `Probabilidade: ${(maxProb * 100).toFixed(1)}%`;
+
+            document.getElementById('results-section').style.display = 'block';
+            window.scrollTo({ top: document.getElementById('results-section').offsetTop - 20, behavior: 'smooth' });
+        };
+    </script>
+</body>
+</html>
