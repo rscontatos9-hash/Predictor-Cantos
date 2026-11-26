@@ -328,7 +328,7 @@
       <div class="form-grid">
         <div class="input-group"><label>Produto</label><select id="calcProdutoSelect"><option value="">-- Selecione --</option></select></div>
         <div class="input-group"><label>Quantidade</label><input type="number" id="calcQuantidade" value="1" min="0.01" step="0.01"></div>
-        <div class="input-group"><label>Valor Unitário (R$)</label><input id="calcPrecoUnitario" type="number" step="0.01" placeholder="Auto ao selecionar"></div>
+        <div class="input-group"><label>Valor Unitário (R$)</label><input type="number" id="calcPrecoUnitario" step="0.01" placeholder="Auto ao selecionar"></div>
         <button id="btnAdicionarItemCompra"><i class="fas fa-plus-circle"></i> Adicionar à lista</button>
       </div>
       <div id="carrinhoCompra" style="margin-top:14px"></div>
@@ -450,14 +450,11 @@
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.4);
-    } catch(e) {
-      // Caso o navegador bloqueie autoplay de áudio sem interação prévia
-    }
+    } catch(e) {}
   }
 
   function salvarArquivoDispositivo(blob, nomeArquivo) {
     try {
-      if (navigator.canShare && blob.type.includes('text')) {}
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
@@ -526,17 +523,41 @@
   }
   function adicionarCategoria() { const nome = document.getElementById("novaCatNome").value.trim(); if(!nome) return showToast("Informe o nome da categoria", true); if(categoriasCustom.find(c => c.nome.toLowerCase() === nome.toLowerCase())) return showToast("Categoria já existe", true); categoriasCustom.push({ nome, subs: [] }); salvarCategorias(); document.getElementById("novaCatNome").value = ""; showToast("Categoria adicionada"); }
   function adicionarSubcategoria() { const pai = document.getElementById("catPaiSelect").value; const sub = document.getElementById("novaSubcatNome").value.trim(); if(!pai) return showToast("Selecione a categoria pai", true); if(!sub) return showToast("Informe o nome da subcategoria", true); const cat = categoriasCustom.find(c => c.nome === pai); if(cat.subs.find(s => s.toLowerCase() === sub.toLowerCase())) return showToast("Subcategoria já existe", true); cat.subs.push(sub); salvarCategorias(); document.getElementById("novaSubcatNome").value = ""; showToast("Subcategoria adicionada"); }
-  function removerCategoria(idx) { if(confirm('Remover categoria "' + categoriasCustom[idx].nome + '"?')) { categoriasCustom.splice(idx, 1); salvarCategorias(); showToast("Categoria removida"); } }
-  function removerSubcategoria(catIdx, subIdx) { categoriasCustom[catIdx].subs.splice(subIdx, 1); salvarCategorias(); showToast("Subcategoria removida"); }
+  function removerCategoria(idx) { if(confirm('⚠️ Tem certeza que deseja remover a categoria "' + categoriasCustom[idx].nome + '"?')) { categoriasCustom.splice(idx, 1); salvarCategorias(); showToast("Categoria removida"); } }
+  function removerSubcategoria(catIdx, subIdx) { 
+    if(confirm('⚠️ Tem certeza que deseja remover a subcategoria "' + categoriasCustom[catIdx].subs[subIdx] + '"?')) {
+      categoriasCustom[catIdx].subs.splice(subIdx, 1); salvarCategorias(); showToast("Subcategoria removida"); 
+    }
+  }
 
   // HISTORICO VENDAS
   let historicoVendas = JSON.parse(localStorage.getItem("historico_vendas_loja")) || [];
   function salvarHistoricoVendas() { localStorage.setItem("historico_vendas_loja", JSON.stringify(historicoVendas)); }
-  function registrarVenda(tipo, clienteNome, produtoNome, quantidade, unidade, valorTotal, data) { historicoVendas.unshift({ id: Date.now() + '-' + Math.random().toString(36).substr(2,4), tipo, cliente: clienteNome, produto: produtoNome, quantidade, unidade, valor: valorTotal, data }); if (historicoVendas.length > 500) historicoVendas = historicoVendas.slice(0, 500); salvarHistoricoVendas(); atualizarUltimasVendas(); atualizarTotalDia(); }
-  function atualizarUltimasVendas() { const container = document.getElementById('listaUltimasVendas'); if (!container) return; if (historicoVendas.length === 0) { container.innerHTML = '<div class="empty-msg">Nenhuma venda registrada ainda.</div>'; return; } let html = ''; historicoVendas.slice(0, 50).forEach(v => { html += '<div class="historico-item" style="border-left-color:' + (v.tipo==='crédito'?'#6366f1':'#0ea5e9') + '"><div class="flex-between"><strong>' + escapeHtml(v.cliente) + '</strong><span style="font-weight:700">R$ ' + v.valor.toFixed(2) + '</span></div><div style="font-size:0.8rem;color:#475569">' + escapeHtml(v.produto) + ' | ' + v.quantidade + ' ' + v.unidade + ' | ' + (v.tipo==='crédito'?'📝 Crédito':'💰 À vista') + ' | ' + v.data + '</div></div>'; }); container.innerHTML = html; }
+  function registrarVenda(tipo, clienteNome, produtoNome, quantidade, unidade, valorTotal, data) { 
+    historicoVendas.unshift({ id: Date.now() + '-' + Math.random().toString(36).substr(2,4), tipo, cliente: clienteNome, produto: produtoNome, quantidade, unidade, valor: valorTotal, data }); 
+    if (historicoVendas.length > 500) historicoVendas = historicoVendas.slice(0, 500); 
+    salvarHistoricoVendas(); 
+    atualizarUltimasVendas(); 
+    atualizarTotalDia(); 
+  }
+
+  function atualizarUltimasVendas() { 
+    const container = document.getElementById('listaUltimasVendas'); 
+    if (!container) return; 
+    if (historicoVendas.length === 0) { 
+      container.innerHTML = '<div class="empty-msg">Nenhuma venda registrada ainda.</div>'; 
+      return; 
+    } 
+    let html = ''; 
+    historicoVendas.slice(0, 50).forEach(v => { 
+      html += '<div class="historico-item" style="border-left-color:' + (v.tipo==='crédito'?'#6366f1':'#0ea5e9') + '"><div class="flex-between"><strong>' + escapeHtml(v.cliente) + '</strong><span style="font-weight:700">R$ ' + v.valor.toFixed(2) + '</span></div><div style="font-size:0.8rem;color:#475569;margin-top:4px">' + escapeHtml(v.produto) + ' | ' + v.quantidade + ' ' + v.unidade + ' | ' + (v.tipo==='crédito'?'📝 Crédito':'💰 À vista') + ' | ' + v.data + '</div></div>'; 
+    }); 
+    container.innerHTML = html; 
+  }
+
   function buscarVendasPorData(tipo, data) { if (!data) return 0; return historicoVendas.filter(v => v.tipo === tipo && v.data === data).reduce((s, v) => s + v.valor, 0); }
   function atualizarTotalDia() { const hoje = new Date().toISOString().slice(0,10); const total = historicoVendas.filter(v => v.data === hoje).reduce((s, v) => s + v.valor, 0); document.getElementById('totalVendasDia').innerHTML = 'R$ ' + total.toFixed(2); }
-  function resetarVendasDoDia() { const hoje = new Date().toISOString().slice(0,10); if (confirm('Remover vendas do dia ' + hoje + '?')) { historicoVendas = historicoVendas.filter(v => v.data !== hoje); salvarHistoricoVendas(); atualizarUltimasVendas(); atualizarTotalDia(); showToast("Vendas do dia resetadas!"); } }
+  function resetarVendasDoDia() { const hoje = new Date().toISOString().slice(0,10); if (confirm('⚠️ Tem certeza que deseja remover todas as vendas registradas do dia ' + hoje + '?')) { historicoVendas = historicoVendas.filter(v => v.data !== hoje); salvarHistoricoVendas(); atualizarUltimasVendas(); atualizarTotalDia(); showToast("Vendas do dia resetadas!"); } }
   function limparTodasVendas() { if (!historicoVendas.length) return showToast("Nenhuma venda", true); if (confirm('⚠️ REMOVER TODAS AS ' + historicoVendas.length + ' VENDAS? Ação irreversível!')) { historicoVendas = []; salvarHistoricoVendas(); atualizarUltimasVendas(); atualizarTotalDia(); document.getElementById('totalAvista').innerHTML = 'R$ 0,00'; document.getElementById('totalCredito').innerHTML = 'R$ 0,00'; showToast("Todas as vendas removidas"); } }
 
   // ESTOQUE
@@ -598,9 +619,9 @@
     salvarEstoque(); document.getElementById("estoqueProdNome").value = ""; document.getElementById("estoqueQtd").value = "0"; document.getElementById("estoquePrecoCusto").value = ""; document.getElementById("estoquePrecoVenda").value = ""; document.getElementById("estoqueCategoria").value = "";
   }
   function editarProdutoEstoque(idx) { let item = estoque[idx]; let n = prompt("Nome", item.nome); if(n && n.trim()) item.nome = n.trim(); let q = prompt("Quantidade", item.quantidade); if(q !== null && !isNaN(parseInt(q))) item.quantidade = parseInt(q); let u = prompt("Unidade", item.unidade); if(u) item.unidade = u; let pc = prompt("Preço custo", item.precoCusto||0); if(pc !== null && !isNaN(parseFloat(pc))) item.precoCusto = parseFloat(pc); let pv = prompt("Preço venda", item.precoVenda || item.precoCusto || 0); if(pv !== null && !isNaN(parseFloat(pv))) item.precoVenda = parseFloat(pv); let c = prompt("Categoria", item.categoria); if(c !== null) item.categoria = c; salvarEstoque(); }
-  function removerProdutoEstoque(idx) { if(confirm('Remover "' + estoque[idx].nome + '"?')) { estoque.splice(idx,1); salvarEstoque(); showToast("Removido"); } }
+  function removerProdutoEstoque(idx) { if(confirm('⚠️ Tem certeza que deseja remover o produto "' + estoque[idx].nome + '" do estoque?')) { estoque.splice(idx,1); salvarEstoque(); showToast("Removido"); } }
   function exportarEstoqueCSV() { if(!estoque.length) return showToast("Estoque vazio", true); let rows = [["Produto","Qtd","Unidade","Preço Custo","Preço Venda","Categoria"]]; estoque.forEach(function(p) { rows.push([p.nome, p.quantidade, p.unidade||'un', (p.precoCusto||0).toFixed(2), (p.precoVenda||p.precoCusto||0).toFixed(2), p.categoria||'']); }); let csv = rows.map(function(r){return r.join(";");}).join("\n"); let blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"}); salvarArquivoDispositivo(blob, 'estoque_' + Date.now() + '.csv'); showToast("CSV salvo"); }
-  function limparEstoque() { if(confirm("Limpar TODO o estoque?")) { estoque = []; salvarEstoque(); showToast("Estoque limpo"); } }
+  function limparEstoque() { if(confirm("⚠️ ATENÇÃO: Deseja realmente limpar TODO o estoque? Esta ação não pode ser desfeita.")) { estoque = []; salvarEstoque(); showToast("Estoque limpo"); } }
   function atualizarSelectsEstoque() {
     const selectVenda = document.getElementById("vendaProdutoSelect"); const selectCalc = document.getElementById("calcProdutoSelect");
     const options = '<option value="">-- Selecione --</option>' + estoque.map(function(p) { const precoV = p.precoVenda || p.precoCusto || 0; return '<option value="' + escapeHtml(p.nome) + '" data-unid="' + (p.unidade||'un') + '" data-qtd="' + p.quantidade + '" data-preco="' + precoV.toFixed(2) + '">' + escapeHtml(p.nome) + ' (' + p.quantidade + ' ' + (p.unidade||'un') + ' | R$ ' + precoV.toFixed(2) + ')</option>'; }).join('');
@@ -703,7 +724,14 @@
     document.getElementById('novoClienteNome').value = ''; document.getElementById('novoClienteWhats').value = '';
   }
   function editarCliente(id) { let c = clientes.find(function(c){return c.id===id;}); let n = prompt("Nome", c.nome); if(n && n.trim()) c.nome = n.trim(); let w = prompt("WhatsApp (com DDD)", c.whatsapp); if(w!==null) c.whatsapp = w; saveData(); }
-  function excluirCliente(id) { if(confirm("Excluir este cliente?")) { clientes = clientes.filter(function(c){return c.id!==id;}); if(clienteSelecionadoId===id) clienteSelecionadoId = null; saveData(); showToast("Cliente removido"); } }
+  function excluirCliente(id) { 
+    let c = clientes.find(function(x){return x.id===id;});
+    if(confirm('⚠️ Tem certeza que deseja excluir o cliente "' + (c ? c.nome : '') + '"? Todos os registros dele serão apagados!')) { 
+      clientes = clientes.filter(function(c){return c.id!==id;}); 
+      if(clienteSelecionadoId===id) clienteSelecionadoId = null; 
+      saveData(); showToast("Cliente removido"); 
+    } 
+  }
   function selecionarClienteParaVenda(id) { clienteSelecionadoId = id; trocarAba('tabVendas'); let sel = document.getElementById('vendaClienteSelect'); if(sel) sel.value = id; atualizarClienteVendaUI(); }
   
   function atualizarClienteVendaUI() {
@@ -716,11 +744,10 @@
       cli.produtos.forEach(function(p, idx) { 
         let d = document.createElement('div'); 
         d.className = 'produto-card'; 
-        d.innerHTML = '<div class="flex-between"><span><strong>' + escapeHtml(p.nome) + '</strong> | ' + p.qtd + ' ' + (p.unidade||'un') + ' x R$ ' + p.preco.toFixed(2) + ' | ' + (p.data||'--') + '</span><span style="display:inline-flex;align-items:center;gap:6px">R$ ' + (p.qtd*p.preco).toFixed(2) + ' <button class="btn-warning btn-sm" title="Estornar produto (devolver ao estoque)" data-estornar="' + idx + '"><i class="fas fa-undo"></i> Estornar</button> <button class="btn-danger btn-sm" data-idx="' + idx + '"><i class="fas fa-times"></i></button></span></div>'; 
+        d.innerHTML = '<div class="flex-between"><span><strong>' + escapeHtml(p.nome) + '</strong> | ' + p.qtd + ' ' + (p.unidade||'un') + ' x R$ ' + p.preco.toFixed(2) + ' | ' + (p.data||'--') + '</span><span style="display:inline-flex;align-items:center;gap:6px"><div class="qtd-control"><button class="btn-sm" data-cli-dec="' + idx + '" style="background:none;box-shadow:none;color:#0f172a;padding:2px 5px"><i class="fas fa-minus"></i></button><span style="font-weight:700;min-width:20px;text-align:center">' + p.qtd + '</span><button class="btn-sm" data-cli-inc="' + idx + '" style="background:none;box-shadow:none;color:#0f172a;padding:2px 5px"><i class="fas fa-plus"></i></button></div>R$ ' + (p.qtd*p.preco).toFixed(2) + ' <button class="btn-danger btn-sm" title="Deletar item" data-idx="' + idx + '">X</button></span></div>'; 
         
-        d.querySelector('[data-estornar]').addEventListener('click', function() {
-          estornarProdutoCliente(cli.id, idx);
-        });
+        d.querySelector('[data-cli-inc]').addEventListener('click', function() { alterarQtdItemCliente(cli.id, idx, 1); });
+        d.querySelector('[data-cli-dec]').addEventListener('click', function() { alterarQtdItemCliente(cli.id, idx, -1); });
 
         d.querySelector('[data-idx]').addEventListener('click', function() { 
           removerProdutoCliente(cli.id, idx); 
@@ -732,36 +759,46 @@
     document.getElementById('totalPendenteVenda').innerHTML = 'R$ ' + (cli.totalDebito||0).toFixed(2);
   }
 
-  function estornarProdutoCliente(cid, pid) {
+  function alterarQtdItemCliente(cid, pid, delta) {
     let c = clientes.find(function(c){return c.id===cid;});
     if(!c || !c.produtos[pid]) return;
-    let itemEstornado = c.produtos[pid];
+    let item = c.produtos[pid];
+    
+    let prodEstoque = estoque.find(function(p){ return normalizarTexto(p.nome) === normalizarTexto(item.nome) && (p.unidade||'un') === (item.unidade||'un'); });
 
-    if(confirm(`Deseja estornar "${itemEstornado.nome}" (${itemEstornado.qtd} ${itemEstornado.unidade||'un'})? O produto retornará automaticamente para o estoque.`)) {
-      let prodEstoque = estoque.find(function(p){ return normalizarTexto(p.nome) === normalizarTexto(itemEstornado.nome) && (p.unidade||'un') === (itemEstornado.unidade||'un'); });
-      if(prodEstoque) {
-        prodEstoque.quantidade += itemEstornado.qtd;
-      } else {
-        estoque.push({
-          nome: itemEstornado.nome,
-          quantidade: itemEstornado.qtd,
-          unidade: itemEstornado.unidade || 'un',
-          precoCusto: itemEstornado.preco || 0,
-          precoVenda: itemEstornado.preco || 0,
-          categoria: 'Estornado'
-        });
+    if(delta > 0) {
+      if(!prodEstoque || prodEstoque.quantidade < 1) { showToast("Estoque insuficiente!", true); return; }
+      prodEstoque.quantidade -= 1;
+      item.qtd += 1;
+    } else {
+      if(item.qtd <= 1) {
+        removerProdutoCliente(cid, pid);
+        return;
       }
-      salvarEstoque();
-
-      c.produtos.splice(pid, 1);
-      recalcularDebitoCliente(c);
-      saveData();
-      showToast(`Estorno realizado! ${itemEstornado.qtd} ${itemEstornado.unidade||'un'} de "${itemEstornado.nome}" retornou ao estoque.`);
-      atualizarClienteVendaUI();
+      item.qtd -= 1;
+      if(prodEstoque) prodEstoque.quantidade += 1;
     }
+
+    item.totalItem = item.qtd * item.preco;
+    salvarEstoque();
+    recalcularDebitoCliente(c);
+    saveData();
+    atualizarClienteVendaUI();
+    showToast(`Quantidade atualizada: ${item.nome} (${item.qtd})`);
   }
 
-  function removerProdutoCliente(cid, pid) { let c = clientes.find(function(c){return c.id===cid;}); if(c && c.produtos[pid]) { c.produtos.splice(pid,1); recalcularDebitoCliente(c); saveData(); showToast("Item removido"); } }
+  function removerProdutoCliente(cid, pid) { 
+    let c = clientes.find(function(c){return c.id===cid;}); 
+    if(c && c.produtos[pid]) { 
+      let item = c.produtos[pid];
+      if(confirm(`⚠️ Tem certeza que deseja DELETAR "${item.nome}" (${item.qtd} ${item.unidade||'un'}) da lista do cliente? (O produto não voltará para o estoque)`)) {
+        c.produtos.splice(pid,1); 
+        recalcularDebitoCliente(c); 
+        saveData(); 
+        showToast("Item removido"); 
+      }
+    } 
+  }
   function recalcularDebitoCliente(c) { let totalProd = (c.produtos||[]).reduce(function(a,p){return a + (p.qtd*p.preco);}, 0); let totalPago = (c.pagamentos||[]).reduce(function(a,p){return a + p.valor;}, 0); c.totalDebito = Math.max(0, totalProd - totalPago); }
 
   function addVendaComEstoque() {
@@ -804,10 +841,25 @@
     let cid = document.getElementById('pagClienteSelect').value; if(!cid) { document.getElementById('historicoPagamentos').innerHTML = '<div class="empty-msg">Selecione um cliente</div>'; return; }
     let c = clientes.find(function(c){return c.id===cid;}); if(!c || !c.pagamentos || !c.pagamentos.length) { document.getElementById('historicoPagamentos').innerHTML = '<div class="empty-msg">Sem pagamentos</div>'; return; }
     let cont = document.getElementById('historicoPagamentos'); cont.innerHTML = '';
-    c.pagamentos.slice().reverse().forEach(function(p) { let d = document.createElement('div'); d.className = 'pagamento-card'; d.innerHTML = '<div class="flex-between"><span><strong>R$ ' + p.valor.toFixed(2) + '</strong> — ' + p.forma + '</span><span style="font-size:0.8rem;color:#475569">' + p.data + ' <button class="btn-danger btn-sm" data-pag="' + p.id + '"><i class="fas fa-undo-alt"></i></button></span></div>'; d.querySelector('button').addEventListener('click', function() { c.pagamentos = c.pagamentos.filter(function(pg){return pg.id!==p.id;}); recalcularDebitoCliente(c); saveData(); showToast("Pagamento estornado"); if(clienteSelecionadoId===cid) atualizarClienteVendaUI(); atualizarHistoricoPagamentosUI(); }); cont.appendChild(d); });
+    c.pagamentos.slice().reverse().forEach(function(p) { 
+      let d = document.createElement('div'); 
+      d.className = 'pagamento-card'; 
+      d.innerHTML = '<div class="flex-between"><span><strong>R$ ' + p.valor.toFixed(2) + '</strong> — ' + p.forma + '</span><span style="font-size:0.8rem;color:#475569">' + p.data + ' <button class="btn-danger btn-sm" title="Estornar pagamento" data-pag="' + p.id + '"><i class="fas fa-undo-alt"></i></button></span></div>'; 
+      d.querySelector('button').addEventListener('click', function() { 
+        if(confirm(`⚠️ Deseja realmente ESTORNAR o pagamento de R$ ${p.valor.toFixed(2)} (${p.forma} em ${p.data})?`)) {
+          c.pagamentos = c.pagamentos.filter(function(pg){return pg.id!==p.id;}); 
+          recalcularDebitoCliente(c); 
+          saveData(); 
+          showToast("Pagamento estornado"); 
+          if(clienteSelecionadoId===cid) atualizarClienteVendaUI(); 
+          atualizarHistoricoPagamentosUI(); 
+        }
+      }); 
+      cont.appendChild(d); 
+    });
   }
   function refreshSelects() { let v = document.getElementById('vendaClienteSelect'); let p = document.getElementById('pagClienteSelect'); let opts = '<option value="">-- Selecione --</option>' + clientes.map(function(c){return '<option value="' + c.id + '">' + escapeHtml(c.nome) + ' (R$ ' + (c.totalDebito||0).toFixed(2) + ')</option>';}).join(''); if(v) { v.innerHTML = opts; if(clienteSelecionadoId) v.value = clienteSelecionadoId; } if(p) p.innerHTML = opts; }
-  function zerarDividaCliente() { if(!clienteSelecionadoId) return showToast("Selecione cliente", true); if(confirm("Zerar toda a dívida deste cliente?")) { let c = clientes.find(function(c){return c.id===clienteSelecionadoId;}); if(c) { c.produtos = []; c.totalDebito = 0; saveData(); atualizarClienteVendaUI(); showToast('Conta de ' + c.nome + ' zerada'); } } }
+  function zerarDividaCliente() { if(!clienteSelecionadoId) return showToast("Selecione cliente", true); if(confirm("⚠️ Tem certeza que deseja zerar toda a dívida deste cliente e finalizar a conta?")) { let c = clientes.find(function(c){return c.id===clienteSelecionadoId;}); if(c) { c.produtos = []; c.totalDebito = 0; saveData(); atualizarClienteVendaUI(); showToast('Conta de ' + c.nome + ' zerada'); } } }
   function abrirModalInfo(id) { let c = clientes.find(function(c){return c.id===id;}); if(!c) return; document.getElementById('modalNomeCliente').innerHTML = escapeHtml(c.nome); document.getElementById('modalConteudoInfo').innerHTML = '<p><strong>WhatsApp:</strong> ' + (c.whatsapp||'Não informado') + '</p><p><strong>💰 Saldo:</strong> <span style="color:#0369a1;font-weight:700">R$ ' + (c.totalDebito||0).toFixed(2) + '</span></p><div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap"><button class="btn-whatsapp btn-sm" onclick="enviarWhatsApp(\''+c.id+'\',\'cobranca\')"><i class="fab fa-whatsapp"></i> Cobrança</button><button class="btn-whatsapp btn-sm" style="background:linear-gradient(145deg,#15803d,#22c55e)" onclick="enviarWhatsApp(\''+c.id+'\',\'agradecimento\')"><i class="fab fa-whatsapp"></i> Agradecer</button><button class="btn-whatsapp btn-sm" style="background:linear-gradient(145deg,#ea580c,#fb923c)" onclick="enviarWhatsApp(\''+c.id+'\',\'oferta\')"><i class="fab fa-whatsapp"></i> Oferta</button></div><hr style="margin:10px 0"><h4>Últimos produtos:</h4>' + (c.produtos && c.produtos.length ? c.produtos.slice(-5).map(function(p){return '<div class="produto-card">' + p.nome + ' | ' + p.qtd + ' ' + (p.unidade||'un') + ' x R$ ' + p.preco.toFixed(2) + ' = R$ ' + (p.qtd*p.preco).toFixed(2) + '</div>';}).join('') : '<div class="empty-msg">Nenhum</div>') + '<h4 style="margin-top:10px">Últimos pagamentos:</h4>' + (c.pagamentos && c.pagamentos.length ? c.pagamentos.slice(-5).map(function(p){return '<div class="pagamento-card">R$ ' + p.valor.toFixed(2) + ' — ' + p.forma + ' (' + p.data + ')</div>';}).join('') : '<div class="empty-msg">Nenhum</div>'); document.getElementById('modalInfoCliente').classList.add('active'); }
   function exportarNotaCliente(id) { let c = clientes.find(function(c){return c.id===id;}); if(!c) return; let txt = 'CONTROL BUSINESS — NOTA DO CLIENTE\n' + '='.repeat(40) + '\nLoja: ' + nomeLoja + '\nCliente: ' + c.nome + '\nWhatsApp: ' + (c.whatsapp||'-') + '\nDívida: R$ ' + (c.totalDebito||0).toFixed(2) + '\n\nProdutos:\n' + (c.produtos && c.produtos.length ? c.produtos.map(function(p){return p.nome + ' | ' + p.qtd + ' ' + (p.unidade||'un') + ' x R$ ' + p.preco.toFixed(2) + ' = R$ ' + (p.qtd*p.preco).toFixed(2);}).join('\n') : 'Nenhum') + '\n\nPagamentos:\n' + (c.pagamentos && c.pagamentos.length ? c.pagamentos.map(function(p){return 'R$ ' + p.valor.toFixed(2) + ' em ' + p.data + ' (' + p.forma + ')';}).join('\n') : 'Nenhum'); let blob = new Blob([txt], {type:"text/plain;charset=utf-8"}); salvarArquivoDispositivo(blob, 'nota_' + c.nome.replace(/[^a-z0-9]/gi,'_') + '.txt'); showToast("Nota salva"); }
   function renderGraficoDebitos() { let ctx = document.getElementById('debtChart').getContext('2d'); if(window.debtChartInstance) window.debtChartInstance.destroy(); window.debtChartInstance = new Chart(ctx, { type:'bar', data:{ labels: clientes.map(function(c){return c.nome.length>12?c.nome.slice(0,10)+'..':c.nome;}), datasets:[{label:'Débito (R$)', data: clientes.map(function(c){return c.totalDebito||0;}), backgroundColor:'#0ea5e9', borderRadius:8, borderSkipped:false}] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ labels:{ color:'#1e293b' } } }, scales:{ y:{ beginAtZero:true, ticks:{ color:'#475569' } }, x:{ ticks:{ color:'#475569' } } } } }); let topHtml = clientes.slice().sort(function(a,b){return (b.totalDebito||0)-(a.totalDebito||0);}).slice(0,5).map(function(c){return '<div class="flex-between" style="padding:9px 0;border-bottom:1px solid #e2e8f0"><span style="color:#1a1a1a">' + escapeHtml(c.nome) + '</span><strong style="color:#0f172a">R$ ' + (c.totalDebito||0).toFixed(2) + '</strong></div>';}).join(''); document.getElementById('topClientesList').innerHTML = topHtml || '<div class="empty-msg">Sem dados</div>'; }
@@ -841,10 +893,12 @@
     
     const produtoEstoque = estoque.find(function(p){return normalizarTexto(p.nome) === normalizarTexto(produtoNome);}); 
     if(!produtoEstoque) return showToast("Produto não encontrado", true); 
-    if(produtoEstoque.quantidade < qtd) return showToast("Estoque insuficiente", true); 
+    
+    let itemExistente = carrinhoItens.find(function(i){ return normalizarTexto(i.nome) === normalizarTexto(produtoNome) && i.precoUnitario === preco; });
+    let qtdTotalPretendida = qtd + (itemExistente ? itemExistente.quantidade : 0);
+    if(produtoEstoque.quantidade < qtdTotalPretendida) return showToast("Estoque insuficiente. Disponível: " + produtoEstoque.quantidade, true); 
     
     // AGRUPAMENTO AUTOMÁTICO NO CARRINHO À VISTA
-    let itemExistente = carrinhoItens.find(function(i){ return normalizarTexto(i.nome) === normalizarTexto(produtoNome) && i.precoUnitario === preco; });
     if(itemExistente) {
       itemExistente.quantidade += qtd;
     } else {
@@ -857,7 +911,65 @@
     document.getElementById("calcProdutoSelect").value = ""; 
   }
 
-  function atualizarCarrinhoUI() { const container = document.getElementById("carrinhoCompra"); if(!container) return; if(!carrinhoItens.length) { container.innerHTML = '<div class="empty-msg">Nenhum item adicionado</div>'; document.getElementById("totalCompra").innerText = "R$ 0,00"; return; } let total = 0, html = ''; carrinhoItens.forEach(function(item, idx) { const sub = item.quantidade * item.precoUnitario; total += sub; html += '<div class="produto-card"><div class="flex-between"><span><strong>' + escapeHtml(item.nome) + '</strong> | ' + item.quantidade + ' ' + item.unidade + ' x R$ ' + item.precoUnitario.toFixed(2) + '</span><span>R$ ' + sub.toFixed(2) + ' <button class="btn-danger btn-sm" data-remove="' + idx + '"><i class="fas fa-trash"></i></button></span></div></div>'; }); container.innerHTML = html; document.getElementById("totalCompra").innerText = 'R$ ' + total.toFixed(2); container.querySelectorAll("[data-remove]").forEach(function(btn) { btn.addEventListener("click", function() { carrinhoItens.splice(parseInt(btn.dataset.remove),1); atualizarCarrinhoUI(); }); }); }
+  function atualizarCarrinhoUI() { 
+    const container = document.getElementById("carrinhoCompra"); if(!container) return; 
+    if(!carrinhoItens.length) { container.innerHTML = '<div class="empty-msg">Nenhum item adicionado</div>'; document.getElementById("totalCompra").innerText = "R$ 0,00"; return; } 
+    let total = 0, html = ''; 
+    carrinhoItens.forEach(function(item, idx) { 
+      const sub = item.quantidade * item.precoUnitario; total += sub; 
+      html += '<div class="produto-card"><div class="flex-between"><span><strong>' + escapeHtml(item.nome) + '</strong> | ' + item.quantidade + ' ' + item.unidade + ' x R$ ' + item.precoUnitario.toFixed(2) + '</span><span style="display:inline-flex;align-items:center;gap:6px"><div class="qtd-control"><button class="btn-sm" data-cart-dec="' + idx + '" style="background:none;box-shadow:none;color:#0f172a;padding:2px 5px"><i class="fas fa-minus"></i></button><span style="font-weight:700;min-width:20px;text-align:center">' + item.quantidade + '</span><button class="btn-sm" data-cart-inc="' + idx + '" style="background:none;box-shadow:none;color:#0f172a;padding:2px 5px"><i class="fas fa-plus"></i></button></div>R$ ' + sub.toFixed(2) + ' <button class="btn-danger btn-sm" title="Remover item" data-remove="' + idx + '">X</button></span></div></div>'; 
+    }); 
+    container.innerHTML = html; 
+    document.getElementById("totalCompra").innerText = 'R$ ' + total.toFixed(2); 
+    
+    container.querySelectorAll("[data-cart-inc]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        let idx = parseInt(btn.dataset.cartInc);
+        alterarQtdCarrinhoAvista(idx, 1);
+      });
+    });
+
+    container.querySelectorAll("[data-cart-dec]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        let idx = parseInt(btn.dataset.cartDec);
+        alterarQtdCarrinhoAvista(idx, -1);
+      });
+    });
+
+    container.querySelectorAll("[data-remove]").forEach(function(btn) { 
+      btn.addEventListener("click", function() { 
+        let idx = parseInt(btn.dataset.remove);
+        let item = carrinhoItens[idx];
+        if(confirm(`⚠️ Deseja realmente remover "${item.nome}" (${item.quantidade} ${item.unidade}) da compra?`)) {
+          carrinhoItens.splice(idx, 1); 
+          atualizarCarrinhoUI(); 
+          showToast("Item removido do carrinho");
+        }
+      }); 
+    }); 
+  }
+
+  function alterarQtdCarrinhoAvista(idx, delta) {
+    let item = carrinhoItens[idx];
+    if(!item) return;
+    let prodEstoque = estoque.find(function(p){ return normalizarTexto(p.nome) === normalizarTexto(item.nome); });
+
+    if(delta > 0) {
+      if(!prodEstoque || prodEstoque.quantidade < 1) { showToast("Estoque insuficiente", true); return; }
+      prodEstoque.quantidade -= 1;
+      item.quantidade += 1;
+    } else {
+      if(item.quantidade <= 1) {
+        carrinhoItens.splice(idx, 1);
+      } else {
+        item.quantidade -= 1;
+        if(prodEstoque) prodEstoque.quantidade += 1;
+      }
+    }
+    salvarEstoque();
+    atualizarCarrinhoUI();
+    showToast("Carrinho atualizado");
+  }
   
   function finalizarCompra() { 
     if(!carrinhoItens.length) return showToast("Adicione itens", true); 
@@ -929,7 +1041,7 @@
   document.getElementById('btnAddCategoria').addEventListener('click', adicionarCategoria);
   document.getElementById('btnAddSubcategoria').addEventListener('click', adicionarSubcategoria);
 
-  // PESQUISA ESTOQUE INTELIGENTE (IGNORANDO MAIÚSCULAS/MINÚSCULAS E ACENTOS)
+  // PESQUISA ESTOQUE INTELIGENTE (PRIORIZANDO ITENS QUE COMEÇAM COM AS LETRAS DIGITADAS)
   function criarPesquisaEstoque(tabId, config) {
     var tabEl = document.getElementById(tabId); if (!tabEl) return;
     var glassCard = tabEl.querySelector('.glass-card'); if (!glassCard) return;
@@ -944,9 +1056,22 @@
       debounceTimer = setTimeout(function() {
         var termo = normalizarTexto(input.value.trim());
         if (!termo) { results.style.display = 'none'; estaAberto = false; return; }
-        var encontrados = estoque.filter(function(p) { 
-          return normalizarTexto(p.nome).indexOf(termo) !== -1 || (p.categoria && normalizarTexto(p.categoria).indexOf(termo) !== -1); 
+        
+        var comecamCom = [];
+        var contemNoMeio = [];
+
+        estoque.forEach(function(p) {
+          var nomeNorm = normalizarTexto(p.nome);
+          var catNorm = p.categoria ? normalizarTexto(p.categoria) : "";
+          if (nomeNorm.indexOf(termo) === 0 || catNorm.indexOf(termo) === 0) {
+            comecamCom.push(p);
+          } else if (nomeNorm.indexOf(termo) !== -1 || catNorm.indexOf(termo) !== -1) {
+            contemNoMeio.push(p);
+          }
         });
+
+        var encontrados = comecamCom.concat(contemNoMeio);
+
         if (!encontrados.length) { results.innerHTML = '<div class="empty-msg">Nenhum produto</div>'; results.style.display = 'block'; return; }
         var html = '';
         encontrados.forEach(function(p) {
